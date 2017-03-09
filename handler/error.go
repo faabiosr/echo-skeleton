@@ -22,7 +22,7 @@ func Error(err error, c echo.Context) {
 
 	if he, ok := err.(*echo.HTTPError); ok {
 		code = he.Code
-		msg = he.Message
+		msg = he.Message.(string)
 	}
 
 	if c.Echo().Debug {

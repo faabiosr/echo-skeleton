@@ -43,6 +43,7 @@ func main() {
 	e.GET("/", handler.HomeIndex)
 
 	// Start server
-	e.Color.Printf(" ⇛ %s service - %s\n", appName, color.Green(version))
+	colorer := color.New()
+	colorer.Printf("⇛ %s service - %s\n", appName, color.Green(version))
 	e.Logger.Fatal(e.Start(":" + port))
 }
