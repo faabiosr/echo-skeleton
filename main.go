@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"github.com/fabiorphp/myapp/handler"
 	"github.com/labstack/echo"
 	mw "github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/color"
 	"github.com/labstack/gommon/log"
 	"os"
+	"os/signal"
+	"time"
 )
 
 var (
@@ -45,5 +48,22 @@ func main() {
 	// Start server
 	colorer := color.New()
 	colorer.Printf("⇛ %s service - %s\n", appName, color.Green(version))
-	e.Logger.Fatal(e.Start(":" + port))
+
+	go func() {
+		if err := e.Start(":" + port); err != nil {
+			colorer.Printf(color.Red("⇛ shutting down the server\n"))
+		}
+	}()
+
+	// Graceful Shutdown
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	}
 }
