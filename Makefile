@@ -1,49 +1,58 @@
-.PHONY: depend clean build build-docker test test-coverage
-
-APP_NAME=myapp
-APP_PATH=$(shell head -n 1 ./glide.yaml | awk '{print $$2}')
+APP_NAME=app
 APP_VERSION=0.0.1
-
-LDFLAGS=--ldflags '-X main.version=${APP_VERSION} -X main.appName=${APP_NAME} -extldflags "-static" -w'
+LDFLAGS=--ldflags '-X main.version=${APP_VERSION} -X main.appName=${APP_NAME} -extldflags "-static" -w -s'
+NO_VENDOR=$(shell go list ./... | grep -v /vendor/)
 OS=linux
-PACKAGES=$(shell find ./handler -type d)
-
-DOCKER_NS=mydockerns
 
 .DEFAULT_GOAL := build
 
-depend:
-	@command -v glide > /dev/null 2>&1 || ( echo "Please install Glide https://github.com/Masterminds/glide" && exit 1 )
-	@glide install
+# Build app
+build:
+	CGO_ENABLED=0 GOOS=${OS} go build -v -a ${LDFLAGS} -tags netgo -installsuffix netgo \
+    -o ./build/${APP_NAME} github.com/fabiorphp/echo-skeleton/cmd/app/
+.PHONY: build
 
+# Clean up
 clean:
-	@rm -fR vendor/ glide.lock ./bin ./.glide/ ${APP_NAME}
+	@rm -fR ./build/ ./vendor/
+.PHONY: clean
 
-build: depend
-ifeq ($(BUILD),docker)
-	@command -v docker > /dev/null 2>&1 || ( echo "Please install Docker https://docs.docker.com/engine/installation/" && exit 1 )
-	@docker run --rm \
-        -v "$(shell pwd)":/go/src/${APP_PATH} \
-        -w /go/src/${APP_PATH} \
-        fabiorphp/golang-glide:1.8 sh -c "make OS=${OS} APP_NAME=${APP_NAME} APP_VERSION=${APP_VERSION}"
-else
-	CGO_ENABLED=0 GOOS=${OS} go build -a ${LDFLAGS} -tags netgo -installsuffix netgo -v -o ./bin/${APP_NAME}
-endif
+# Creates folders and download dependencies
+configure:
+	@mkdir -p ./build
+	dep ensure -v
+.PHONY: configure
 
-pack:
-	@command -v docker > /dev/null 2>&1 || ( echo "Please install Docker https://docs.docker.com/engine/installation/" && exit 1 )
-	@docker build -t ${DOCKER_NS}/${APP_NAME}:${APP_VERSION} --build-arg APP_NAME=${APP_NAME} -f ./Dockerfile .
+# Run tests and generates html coverage file
+cover:
+	echo "mode: set" > ./build/coverage.out; \
+    for i in ${NO_VENDOR}; do \
+        go test -v -race -coverprofile=./build/cover.out $$i; \
+        test -f ./build/cover.out && tail -n +2 ./build/cover.out >> ./build/coverage.out; \
+    done; \
+    go tool cover -html=./build/coverage.out -o ./build/coverage.html; \
+    test -f ./build/cover.out && rm ./build/cover.out; \
+    test -f ./build/coverage.out && rm ./build/coverage.out;
+.PHONY: cover
 
+# Install dependencies
+depend:
+	go get -u gopkg.in/alecthomas/gometalinter.v2
+	gometalinter.v2 --install
+	go get -u github.com/golang/dep/...
+.PHONY: depend
+
+# Format all go files
+fmt:
+	gofmt -s -w -l $(shell go list -f {{.Dir}} ./... | grep -v /vendor/)
+.PHONY: fmt
+
+# Run linters
+lint:
+	gometalinter.v2 --vendor --disable-all --enable=golint ./...
+.PHONY: lint
+
+# Run tests
 test:
-	@$(foreach pkg, $(PACKAGES),\
-        go test $(pkg); \
-    )
-
-test-coverage:
-	@echo "mode: set" > coverage.out
-	@$(foreach pkg, $(PACKAGES),\
-        go test -coverprofile=cover.out $(pkg); \
-        tail -n +2 cover.out >> coverage.out; \
-    )
-	@go tool cover -html=coverage.out -o coverage.html
-	@rm cover.out coverage.out
+	go test -v -race ${NO_VENDOR}
+.PHONY: test

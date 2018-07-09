@@ -1,59 +1,36 @@
 # MY APP
 Manage something
 
-## Requirements
-App requires Golang 1.8 or later and Glide Package Manager.
+## Development
 
-## Installation
-- Install [Golang](https://golang.org/doc/install)
-- Install [Glide](https://glide.sh)
+### Requirements
 
-## Build
-For building binaries please use make, look at the commands bellow:
+- Install [Go](https://golang.org)
+- Install [go dep](https://github.com/golang/dep)
 
-```
-// Build the binary in your environment
+### Makefile
+```sh
+// Build a beta version of kongo
 $ make build
 
-// Build using Docker
-$ make BUILD=docker build
-
-// Build with another OS. Default Linux
-$ make OS=darwin build
-
-// Build with custom version.
-$ make APP_VERSION=0.1.0 build
-
-// Build with custom app name.
-$ make APP_NAME=myapp build
-
-// Passing all flags
-$ make BUILD=docker OS=darwin APP_NAME=myapp APP_VERSION=0.1.0 build
-
-// Clean Up
+// Clean up
 $ make clean
 
-// Create a docker image with application
-$ make pack
+// Creates folders and download dependencies
+$ make configure
 
-// Pack with custom Docker namespace. Default gfgit
-$ make DOCKER_NS=mydockerns pack
+//Run tests and generates html coverage file
+make cover
 
-// Pack with custom version.
-$ make APP_VERSION=0.1.0 pack
+// Download project dependencies
+make depend
 
-// Pack with custom app name.
-$ make APP_NAME=myapp pack
+// Format all go files
+make fmt
 
-// Pack passing all flags
-$ make APP_NAME=myapp APP_VERSION=0.1.0 DOCKER_NS=mydockerns pack
-```
+//Run linters
+make lint
 
-## Develpoment
-```
-// Running tests
-$ make test
-
-// Running tests with coverage. Output coverage file: coverage.html
-$ make test-coverage
+// Run tests
+make test
 ```

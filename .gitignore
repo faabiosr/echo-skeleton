@@ -1,4 +1,2 @@
-/bin
-/vendor
-myapp
-coverage.html
+vendor
+build
